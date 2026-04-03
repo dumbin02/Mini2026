@@ -1,22 +1,52 @@
 #include "Setup.h"
-#define   SETUP_BLE       1
-#define   SETUP_ENCODER   1
-#define   SETUP_MPU       1
-#define   SETUP_BOTON     0
+
+Acciones estadoActual = ESPERAR_A_BOTON;
 
 void setup()
 {
-  setupBLE();
+  mmSetup();
   delay(500);
-  iniciarPines();
+  setupTimer();
+  //giro_diferencial_derecha();
   avanzar();
-  sendTelemetry(contadorA,contadorB,0.0);
-  setPWM(100, 100);
+  setPWM(0,0);
+  resetearContadoresDeEncoders();
 }
 
 void loop()
-{
-  getRevoluciones_Llanta();
-  sendTelemetry(revolucionesA,contadorA,0.0);
-  delay(100);
+{ 
+  if (controlLoopFlag) {
+    controlLoopFlag = false;
+    actualizarOdometriaSensores();
+    // 2. Máquina de Estados de Movimiento
+    switch (estadoActual) {      
+      case DETENERSE:
+        setPWM(0, 0);
+        break;
+      case LINEA_RECTA_PID:
+        targetVelocity2(); 
+        break;
+      case VUELTA_90_DER:
+        noGirarConGyro();
+        break;
+      case VUELTA_90_IZQ:
+        break;
+      case VUELTA_180:
+      setPWM(75,85);
+        break;
+      case ESPERAR_A_BOTON:
+        setPWM(0, 0);
+        if(esperarABoton()){
+          delay(500);
+          resetFlag = true;
+          estadoActual = VUELTA_90_DER;
+        }
+        break;
+    }
+    }
+  
+  if (telemetryLoopFlag){
+    telemetryEndOfRun();
+  }
+  
 }
