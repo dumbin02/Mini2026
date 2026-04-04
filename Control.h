@@ -5,6 +5,7 @@
 #define DEADZONE_MAX_PWM 1023
 #define RADIO_DE_ROTACION   45
 #define DISTANCIA_ENTRE_RUEDAS  83
+#define CONTADOR_PULSO_VEL_MAX 8
 //-------------------------------------------------------------------------------------------------------------------
 enum Acciones : uint8_t {
   DETENERSE = 0,
@@ -26,7 +27,6 @@ void actualizarOdometriaSensores();
 void calculoPIDVelocidad(float targetVelA, float targetVelB);
 void calculoPIDVelocidadAngular();
 void vuelta90Grados();
-void resetearVelocidadYPWM();
 void resetearVariablesPID();
 //Tests
 void targetVelocity1();
@@ -35,8 +35,8 @@ void targetVelocityConst(float vel_A, float vel_B);
 void noGirarConGyro();
 
 //-----------------------------------------------Extern variables-----------------------------------------------
-extern volatile float dt,dtContadorA,dtContadorB;
+extern volatile float dtContadorA,dtContadorB;
 extern int64_t tiempoPrevio,tiempoActualTelemetria,tiempoPrevioTelemetria;
 extern bool endOfRunFlag,resetFlag;
-extern int contadorTargetVel;
+extern int contadorTest;
 #endif

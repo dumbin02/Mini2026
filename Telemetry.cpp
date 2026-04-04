@@ -3,17 +3,17 @@
 
 int i = 0;
 
-int   listaTelemetria0[1500];
-int   listaTelemetria1[1500];
-float listaTelemetria2[1500];
-float listaTelemetria3[1500];
-float listaTelemetria4[1500];
-float listaTelemetria5[1500];
-float listaTelemetria6[1500];
-float listaTelemetria7[1500];
-float listaTelemetria8[1500];
-float listaTelemetria9[1500];
-float listaTelemetria10[1500];
+int   telemetriaPWMA[1500];
+int   telemetriaPWMB[1500];
+float telemetriaVelErr[1500];
+float telemetriaVelPTerm[1500];
+float telemetriaVelDTerm[1500];
+float telemetriaVelITerm[1500];
+float telemetriaAngErr[1500];
+float telemetriaAngPTerm[1500];
+float telemetriaAngDTerm[1500];
+float telemetriaAngITerm[1500];
+float telemetriaDT[1500];
 
 NimBLEServer* server;
 NimBLECharacteristic* telemetryChar;
@@ -60,21 +60,19 @@ void sendDatosVelocidadEOR(uint16_t errIR, float angVelErrorIR, float errAngVel,
 }
 
 void sendValoresPIDEOR(int cuenta){
-  valoresPID = {2,cuenta,2, listaTelemetria0[cuenta],listaTelemetria1[cuenta],
-                                      listaTelemetria2[cuenta],listaTelemetria3[cuenta],listaTelemetria4[cuenta],listaTelemetria5[cuenta],
-                                      listaTelemetria6[cuenta],listaTelemetria7[cuenta],listaTelemetria8[cuenta],listaTelemetria9[cuenta],
-                                      listaTelemetria10[cuenta]};
+  valoresPID = {2,cuenta,2, telemetriaPWMA[cuenta],telemetriaPWMB[cuenta],
+                                      telemetriaVelErr[cuenta],telemetriaVelPTerm[cuenta],telemetriaVelDTerm[cuenta],telemetriaVelITerm[cuenta],
+                                      telemetriaAngErr[cuenta],telemetriaAngPTerm[cuenta],telemetriaAngDTerm[cuenta],telemetriaAngITerm[cuenta],
+                                      telemetriaDT[cuenta]};
   sendBinaryTelemetry(&valoresPID, sizeof(valoresPID));
 }
 
 
 void telemetryEndOfRun(){
-  telemetryLoopFlag = false;
-  
   if(endOfRunFlag){
     
     sendValoresPIDEOR(i);
-    delay(40);                 //pequeño delay para no saturar ble
+    delay(20);                 //pequeño delay para no saturar ble
     i++;
     
     if(i >= 1500) {
@@ -83,6 +81,7 @@ void telemetryEndOfRun(){
       setPWM(300, 300);
       delay(200);
       setPWM(0, 0);
+      telemetryLoopFlag = false;
     }
   }
 }

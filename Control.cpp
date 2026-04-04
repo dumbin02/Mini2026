@@ -4,8 +4,13 @@
 #include "Setup.h"
 
 //Var temp
-  int contadorTargetVel = 0;
-  bool flagVuelta = false;
+  int contadorTest = 0;
+  int contadorPulsoPrevioA = 0;
+  int contadorPulsoPrevioB = 0;
+  int pulsoPrevioA = 0;
+  int pulsoPrevioB = 0;
+//Flags
+  bool vueltaFlag = false;
   bool endOfRunFlag = false;
   bool resetFlag = false;
 
@@ -20,29 +25,30 @@
           int64_t     tiempoPrevioContadorA = 0;
   volatile  int64_t   tiempoActualContadorB = 0;
           int64_t   tiempoPrevioContadorB = 0;
-  volatile  float     dt,dtContadorA,dtContadorB;
+  volatile  float     dtContadorA,dtContadorB;
+            float     dt = 0.001;
 
 //--------------------------------Variables PID Velocidad (Se usa dt [1kHz control loop = 0.001 s como dt]) (const)--------------------------------
   const float  velKP  = 10;
   const float  velKA  = 142;
   const float  velKFF = 3.2;        //3.6 le cambiaste pto
-  const float  velKD  = 0.0027;       //0.27
+  const float  velKD  = 1.4;       //0.27
   const float  velKI  = 300;
-  float  alphaKd = 1;
+  float  alphaKd = 0.002;
   float I_A;
   float I_B ;              
   //--------------------------------------P Term-----------------------------------
   //--------------------------------------I Term-----------------------------------
   float velSumaGananciaIntegralA = 0;      // Acumulador rueda A
   float velSumaGananciaIntegralB = 0;      // Acumulador rueda B
-  const float velGananciaMaxIntegral = 100/velKI; // Anti-Windup: Límite de la suma
+  const float velGananciaMaxIntegral = 30/velKI; // Anti-Windup: Límite de la suma
   //--------------------------------------D Term-----------------------------------
   float  kAcc_VelPreviaA = 0;
   float  kAcc_VelPreviaB = 0;
   float  velErrorPrevioA = 0;
   float  velErrorPrevioB = 0;
-  float  kdPrevioA = 0;
-  float  kdPrevioB = 0;
+  float  previoD_A = 0;
+  float  previoD_B = 0;
   //PWMs de salida
   int pwmOutA;
   int pwmOutB;
@@ -62,9 +68,9 @@
   float velOutB;
 
 void calcular_dt(){
-  tiempoActual = esp_timer_get_time();
-  dt = (tiempoActual-tiempoPrevio)*1e-6;
-  tiempoPrevio = tiempoActual;
+  //tiempoActual = esp_timer_get_time();
+  dt = 0.001; //(tiempoActual-tiempoPrevio)*1e-6;
+  //tiempoPrevio = tiempoActual;
 }
 
 void calcular_dtContadorA(){
@@ -90,18 +96,26 @@ void calcular_dtContadorB(){
 
 void actualizarOdometriaSensores(){
   getVelocidades();
-  calcular_dt();
+
+  //Forzar velocidades a 0 si llevamos cierto tiempo sin recibir un nuevo pulso
+  if(MM.contadorMotorA == pulsoPrevioA) contadorPulsoPrevioA++;
+  else contadorPulsoPrevioA = 0;
+  if(MM.contadorMotorB == pulsoPrevioB) contadorPulsoPrevioB++;
+  else contadorPulsoPrevioB = 0;
+  if(contadorPulsoPrevioA >= CONTADOR_PULSO_VEL_MAX) MM.velocidadMotorA = 0;
+  if(contadorPulsoPrevioA >= CONTADOR_PULSO_VEL_MAX) MM.velocidadMotorA = 0;
+  
+  //calcular_dt();
   if(resetFlag){
     resetFlag = false;
-    resetearVelocidadYPWM();
     resetearVariablesPID();
     resetearContadoresDeEncoders();
-    dt = 0.001;
+    //dt = 0.001;
   }
   actualizar_sensoresIR();
-  leerMPU();
   getDistanciaRecorrida();
   getVelocidadAng(); 
+  
 }
 
 void resetearVariablesPID(){
@@ -111,17 +125,13 @@ void resetearVariablesPID(){
   I_B = 0;
 }
 
-void resetearVelocidadYPWM(){
-  pwmOutA = 0;
-  pwmOutB = 0;
-  velocidadA = 0;
-  velocidadB = 0;
-}
-
 void calculoPIDVelocidad(float targetVelA, float targetVelB) {
   // 1. Cálculo de errores
-  float errorA = targetVelA - velocidadA;
-  float errorB = targetVelB - velocidadB;
+  float errorA = targetVelA - MM.velocidadMotorA;
+  float errorB = targetVelB - MM.velocidadMotorB;
+
+  telemetriaAngDTerm[contadorTest] = errorA;
+  telemetriaAngITerm[contadorTest] = errorB;
 
   float AccA = targetVelA - kAcc_VelPreviaA;
   float AccB = targetVelB - kAcc_VelPreviaB;
@@ -154,12 +164,20 @@ void calculoPIDVelocidad(float targetVelA, float targetVelB) {
   I_B = velKI * velSumaGananciaIntegralB;
 
   // 4. Ganancia Derivativa (D)
-  float D_A = velKD * (errorA - velErrorPrevioA) / dt;
-  float D_B = velKD * (errorB - velErrorPrevioB) / dt;
+  float errorD_A = (errorA - velErrorPrevioA);
+  float errorD_B = (errorB - velErrorPrevioB);
 
-  D_A = (D_A * alphaKd) + (1.0 - alphaKd) * (kdPrevioA);
-  D_B = (D_B * alphaKd) + (1.0 - alphaKd) * (kdPrevioB);
-
+  float D_A = -velKD * errorD_A / dt;
+  float D_B = -velKD * errorD_B / dt;
+  
+  D_A = (D_A * alphaKd) + (1.0 - alphaKd) * (previoD_A);
+  D_B = (D_B * alphaKd) + (1.0 - alphaKd) * (previoD_B);
+  D_A = constrain(D_A,-500,500);
+  D_B = constrain(D_B,-500,500);
+  previoD_A = D_A;
+  previoD_B = D_B;
+  if((fabsf(errorD_A)) < 2)D_A = 0;
+  if((fabsf(errorD_B)) < 2)D_B = 0;
   velErrorPrevioA = errorA; // Actualizar para el próximo ciclo
   velErrorPrevioB = errorB;
 
@@ -170,15 +188,20 @@ void calculoPIDVelocidad(float targetVelA, float targetVelB) {
   // Aplicamos constrain de PWM final
   pwmOutA = constrain(pwmOutA, -1023, 1023);
   pwmOutB = constrain(pwmOutB, -1023, 1023);
-  
-  listaTelemetria10[contadorTargetVel] = dt;
-  
+  telemetriaVelDTerm[contadorTest] = D_A;
+  telemetriaVelITerm[contadorTest] = errorD_A;
+  telemetriaVelPTerm[contadorTest] = errorD_B;
+  telemetriaPWMA[contadorTest] = pwmOutA;
+  telemetriaPWMB[contadorTest] = pwmOutB;
+  telemetriaAngErr[contadorTest]   = MM.velocidadMotorA;
+  telemetriaAngPTerm[contadorTest] = MM.velocidadMotorB;
+
   setPWM(pwmOutA, pwmOutB);
 }
 
 void calculoPIDVelocidadAngular(){
   //Tomamos como error el negativo de la Velocidad Angular del Giroscopio
-  float omegaError = velocidadAngular;
+  float omegaError = 0;
     
   //Ganancia Proporciona;
   float omegaP  = omegaKP * omegaError;
@@ -196,121 +219,98 @@ void calculoPIDVelocidadAngular(){
     velOutA = 0;
     velOutB = (omegaVelOut);
   }
-  
-  
-  
 }
 
 void noGirarConGyro(){
   calculoPIDVelocidadAngular();
-  float velllA = 270 + velOutA;
-  float velllB = 270 + velOutB; 
+  float velllA = 270 ; //+ velOutA
+  float velllB = 270 ; //+ velOutB 
   calculoPIDVelocidad(velllA, velllB);
-  if(contadorTargetVel >= 1499) {
+  if(contadorTest >= 1499) {
     setPWM(0, 0);
-    contadorTargetVel = 0;
+    contadorTest = 0;
     endOfRunFlag = true;
+    telemetryLoopFlag = true;
     estadoActual = DETENERSE;
   }
-  contadorTargetVel++;
+  contadorTest++;
 }
-
 
 void targetVelocity1() {
   float targetVel = 0;
 
-  if (contadorTargetVel < 500) {
-    targetVel = 300.0 - (float)(contadorTargetVel) * (200.0 / 500.0);
+  if (contadorTest < 500) {
+    targetVel = 300.0 - (float)(contadorTest) * (200.0 / 500.0);
   } 
-  else if (contadorTargetVel < 1000) {
+  else if (contadorTest < 1000) {
     targetVel = 100.0;
   } 
-  else if (contadorTargetVel < 1500) {
+  else if (contadorTest < 1500) {
     // Calculamos cuánto hemos avanzado en esta fase (0 a 500)
-    targetVel = 100 + (float)(contadorTargetVel - 1000) * (200.0 / 500.0);
+    targetVel = 100 + (float)(contadorTest - 1000) * (200.0 / 500.0);
   } 
   calculoPIDVelocidad(targetVel, targetVel);
-   // Error diferencial para análisis
-  
-  
-  
-
+  telemetriaVelErr[contadorTest] = targetVel;
  // 4. Parada Total
-  if(contadorTargetVel >= 1499) {
+  if(contadorTest >= 1499) {
     setPWM(0, 0);
     targetVel = 0;
-    contadorTargetVel = 0;
+    contadorTest = 0;
     endOfRunFlag = true;
+    telemetryLoopFlag = true;
     delay(200);
     estadoActual = DETENERSE;
   }
-  contadorTargetVel++;
+  contadorTest++;
 }
 
 void targetVelocity2() {
   
   float targetVel = 0;
-    targetVel = (float)(contadorTargetVel) * (300.0 / 500.0);
+    targetVel = (float)(contadorTest) * (300.0 / 500.0);
 
-  if (contadorTargetVel < 500) {
+  if (contadorTest < 500) {
   } 
-  else if (contadorTargetVel < 1000) {
+  else if (contadorTest < 1000) {
     targetVel = 300.0;
   } 
-  else if (contadorTargetVel < 1500) {
+  else if (contadorTest < 1500) {
     // Calculamos cuánto hemos avanzado en esta fase (0 a 500)
-    targetVel = 300.0 - (float)(contadorTargetVel - 1000) * (300.0 / 500.0);
+    targetVel = 300.0 - (float)(contadorTest - 1000) * (300.0 / 500.0);
   } 
   calculoPIDVelocidad(targetVel, targetVel);
-   // Error diferencial para análisis
   
-  
-  
-
   // 4. Parada Total
-  if(contadorTargetVel >= 1499) {
+  if(contadorTest >= 1499) {
     setPWM(0, 0);
     targetVel = 0;
-    contadorTargetVel = 0;
+    contadorTest = 0;
     endOfRunFlag = true;
+    telemetryLoopFlag = true;
     delay(100);
     estadoActual = DETENERSE;
   }
-  contadorTargetVel++;
+  telemetriaVelErr[contadorTest] = targetVel;
+  contadorTest++;
 }
 
 void targetVelocityConst(float vel_A, float vel_B){ 
   calculoPIDVelocidad(vel_A, vel_B);
 
-  
-  
-  
-
   // 4. Parada Total
-  if(contadorTargetVel >= 1499) {
+  if(contadorTest >= 1499) {
     setPWM(0, 0);
-    contadorTargetVel = 0;
+    contadorTest = 0;
     endOfRunFlag = true;
+    telemetryLoopFlag = true;
     delay(200);
     estadoActual = DETENERSE;
   }
-  contadorTargetVel++;
+  contadorTest++;
 }
 
 void vuelta90Grados(){
-  if(flagVuelta){
-    resetearContadoresDeEncoders();
-    flagVuelta = false;
-  }
-  if(distanciaRecorridaMM < 70.68){
-    giro_diferencial_derecha();
-    calculoPIDVelocidad(100, 100);
-  }else{
-  setPWM(0,0);
-  delay(500);
-  flagVuelta = true;
-  }
-
+  //
 }
 
 

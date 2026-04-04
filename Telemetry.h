@@ -50,17 +50,17 @@ extern TelemetriaGeneral   datosGeneral;
 extern TelemetriaVelocidad datosVelocidad;
 extern ValoresPID          valoresPID;
 
-extern int listaTelemetria0[1500]; //PWMA
-extern int listaTelemetria1[1500]; //PWMB
-extern float listaTelemetria2[1500]; 
-extern float listaTelemetria3[1500];
-extern float listaTelemetria4[1500];
-extern float listaTelemetria5[1500];
-extern float listaTelemetria6[1500];
-extern float listaTelemetria7[1500];
-extern float listaTelemetria8[1500];
-extern float listaTelemetria9[1500];
-extern float listaTelemetria10[1500];
+extern int   telemetriaPWMA[1500];
+extern int   telemetriaPWMB[1500];
+extern float telemetriaVelErr[1500];
+extern float telemetriaVelPTerm[1500];
+extern float telemetriaVelDTerm[1500];
+extern float telemetriaVelITerm[1500];
+extern float telemetriaAngErr[1500];
+extern float telemetriaAngPTerm[1500];
+extern float telemetriaAngDTerm[1500];
+extern float telemetriaAngITerm[1500];
+extern float telemetriaDT[1500];
 
 
 

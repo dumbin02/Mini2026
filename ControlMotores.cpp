@@ -44,25 +44,25 @@ void setPWM(int pwmA, int pwmB){
     ledcWrite(PWM_A, pwmA);
     digitalWrite(MOTOR_A1, LOW);
     digitalWrite(MOTOR_A2, HIGH); 
-    if(velocidadA >= -10) direccionMotorA = 1;   
+    if(MM.velocidadMotorA >= -10) direccionMotorA = 1;   
   } else{
     pwmA = -(pwmA);
     ledcWrite(PWM_A, pwmA);
     digitalWrite(MOTOR_A1, HIGH);
     digitalWrite(MOTOR_A2, LOW);
-    if(velocidadA <= 10) direccionMotorA = 0;
+    if(MM.velocidadMotorA <= 10) direccionMotorA = 0;
   }
   if(pwmB >= 0){
     ledcWrite(PWM_B, pwmB);
     digitalWrite(MOTOR_B1, HIGH);
     digitalWrite(MOTOR_B2, LOW);
-    if(velocidadB >= -10) direccionMotorB = 1;
+    if(MM.velocidadMotorB >= -10) direccionMotorB = 1;
   }else{
     pwmB = -(pwmB);
     ledcWrite(PWM_B, pwmB);
     digitalWrite(MOTOR_B1, LOW);
     digitalWrite(MOTOR_B2, HIGH);
-    if(velocidadB <= 10) direccionMotorB = 0;
+    if(MM.velocidadMotorB <= 10) direccionMotorB = 0;
   }
   if(pwmA == 0 && pwmB == 0) detenerse();
 }

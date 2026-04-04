@@ -5,12 +5,10 @@
 #define   SETUP_BOTON     1
 #define   SETUP_BLE       1
 #define   SETUP_ENCODER   1
-#define   SETUP_MPU       1
 //-----------------------------------------------LIBRERIAS-----------------------------------------------
 //Acceso a pines
 #include "driver/gpio.h"
-//I2C comm
-#include <Wire.h>
+#include "esp_timer.h"
 //-----------------------------------------------PINES-----------------------------------------------
 //Pines Motor  [Motor Derecho A - Motor Izquierdo B]
 #define   MOTOR_A1          5
@@ -48,9 +46,32 @@ void mmSetup();
 bool esperarABoton();
 #endif
 void timerCallback(void* arg);
-void telemetryCallback(void* arg);
 void setupTimer();
+//---------------------------------------------Mouse-----------------------------------------------------------
+enum Direccion : uint8_t {
+  NORTE = 0,
+  ESTE,
+  SUR,
+  OESTE,
+};
+struct Mouse {
+  int posicionX = 0;
+  int posicionY = 0;
+  Direccion direccion = NORTE;
+  volatile int contadorMotorA;
+  volatile int contadorMotorB;
+  float distanciaRuedaA;
+  float distanciaRuedaB;
+  float distanciaRecorrida;
+  float velocidadMotorA;
+  float velocidadMotorB;
+  float velocidadAngular;
+  float sensorIzquierdo;
+  float sensorDerecho;
+  float sensorFrontal;
+};
 //-----------------------------------------------Extern variables-----------------------------------------------
+extern Mouse MM;
 extern const float constFrecuencia_Control; 
 extern volatile bool controlLoopFlag;
 extern volatile bool telemetryLoopFlag;

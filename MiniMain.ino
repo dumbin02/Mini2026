@@ -39,7 +39,7 @@ void loop()
         if(esperarABoton()){
           delay(500);
           resetFlag = true;
-          estadoActual = VUELTA_90_DER;
+          estadoActual = LINEA_RECTA_PID;
         }
         break;
     }
