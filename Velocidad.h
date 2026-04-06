@@ -16,11 +16,4 @@ void getVelocidades();
 void getVelocidadAng();
 void resetearContadoresDeEncoders();
 
-
-//-----------------------------------------------Extern variables-----------------------------------------------
-extern volatile int     contadorA,contadorB;
-extern volatile float   velocidadA_interrupt, velocidadB_interrupt;
-extern float            velocidadA,velocidadB,velocidadAngular;
-extern float            distanciaRecorridaMM;
-
 #endif

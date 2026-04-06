@@ -60,6 +60,8 @@ struct Mouse {
   Direccion direccion = NORTE;
   volatile int contadorMotorA;
   volatile int contadorMotorB;
+  bool  direccionMotorA;
+  bool  direccionMotorB;
   float distanciaRuedaA;
   float distanciaRuedaB;
   float distanciaRecorrida;
@@ -72,6 +74,7 @@ struct Mouse {
 };
 //-----------------------------------------------Extern variables-----------------------------------------------
 extern Mouse MM;
+extern Mouse* p_MM;
 extern const float constFrecuencia_Control; 
 extern volatile bool controlLoopFlag;
 extern volatile bool telemetryLoopFlag;
@@ -81,5 +84,6 @@ extern esp_timer_handle_t  timer_control;
 #include "Telemetry.h"
 #include "Velocidad.h"
 #include "Control.h"
+#include "velocidadPID.h"
 
 #endif

@@ -8,7 +8,8 @@
 #include "esp32-hal-ledc.h"
 #include "Setup.h"
 
-Mouse MM = {0,0,NORTE,0,0,0,0,0,0,0,0,0,0,0};
+Mouse MM = {0,0,NORTE,0,0,1,1,0,0,0,0,0,0,0,0,0};
+Mouse* p_MM = &MM;
 
 //Flag para el uso del boton
             bool botonFlag = 0;
